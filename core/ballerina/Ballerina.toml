@@ -1,0 +1,15 @@
+[package]
+org = "ballerinax"
+name = "health.dicom"
+version = "0.1.0"
+authors = ["Ballerina"]
+keywords = ["Healthcare", "DICOM", "PACS"]
+repository = "https://github.com/ballerina-platform/module-ballerinax-health.dicom"
+distribution = "2201.8.2"
+export = ["health.dicom"]
+
+[build-options]
+observabilityIncluded = true
+
+[[platform.java17.dependency]]
+path = "../native/build/libs/core-native-0.1.0.jar"

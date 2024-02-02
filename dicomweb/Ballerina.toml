@@ -1,0 +1,17 @@
+[package]
+org = "ballerinax"
+name = "health.dicom.dicomweb"
+version = "0.1.0"
+authors = ["Ballerina"]
+keywords = ["Healthcare", "DICOM", "PACS", "DICOMweb", "Web"]
+repository = "https://github.com/ballerina-platform/module-ballerinax-health.dicom"
+distribution = "2201.8.2"
+export = ["health.dicom.dicomweb"]
+
+[build-options]
+observabilityIncluded = true
+
+[[dependency]]
+org = "ballerinax"
+name = "health.dicom"
+version = "0.1.0"
