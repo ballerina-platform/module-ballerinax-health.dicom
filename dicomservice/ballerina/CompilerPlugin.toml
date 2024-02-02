@@ -1,0 +1,6 @@
+[plugin]
+id = "dicomservice-compiler-plugin"
+class = "io.ballerinax.health.dicom.dicomservice.compiler.DicomCompilerPlugin"
+
+[[dependency]]
+path = "../compiler-plugin/build/libs/dicomservice-compiler-plugin-0.1.0.jar"
