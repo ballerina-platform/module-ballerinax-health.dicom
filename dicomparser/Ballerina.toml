@@ -5,7 +5,7 @@ version = "0.1.0"
 authors = ["Ballerina"]
 keywords = ["Healthcare", "DICOM", "PACS", "Parser"]
 repository = "https://github.com/ballerina-platform/module-ballerinax-health.dicom"
-distribution = "2201.8.2"
+distribution = "2201.12.10"
 export = ["health.dicom.dicomparser"]
 
 [build-options]
@@ -15,3 +15,4 @@ observabilityIncluded = true
 org = "ballerinax"
 name = "health.dicom"
 version = "0.1.0"
+repository = "local"

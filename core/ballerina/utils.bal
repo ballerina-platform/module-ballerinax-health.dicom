@@ -597,7 +597,7 @@ isolated function getNearestUpperPowerOf2(int n) returns int {
 isolated function constructSpaceBytes(int length) returns byte[] {
     byte[] spaceBytes = [];
     while spaceBytes.length() < length {
-        spaceBytes.push(SPACE_BYTE);
+        spaceBytes.push(<byte>SPACE_BYTE);
     }
     return spaceBytes;
 }

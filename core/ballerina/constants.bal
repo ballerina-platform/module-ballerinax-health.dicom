@@ -251,10 +251,10 @@ public enum TransferSyntax {
 public const UNDEFINED_VL_BYTES = [0xFF, 0xFF, 0xFF, 0xFF];
 
 # Constant for space byte.
-public const SPACE_BYTE = 0x20;
+public const byte SPACE_BYTE = 0x20;
 
 # Constant for null byte.
-public const NULL_BYTE = 0x00;
+public const byte NULL_BYTE = 0x00;
 
 # VR value character set validators 
 final map<string> & readonly VALUE_CHARSET_VALIDATORS = {

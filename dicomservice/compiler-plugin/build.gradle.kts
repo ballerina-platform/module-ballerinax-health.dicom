@@ -28,9 +28,9 @@ dependencies {
     implementation(group = "org.ballerinalang", name = "ballerina-parser", version = ballerinaLangVersion)
 }
 
-// Set Java language version to 17
+// Set Java language version to 21
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }

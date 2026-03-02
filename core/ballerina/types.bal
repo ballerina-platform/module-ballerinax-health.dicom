@@ -54,7 +54,7 @@ public type SequenceItem record {|
 public type SequenceValue table<SequenceItem> key(tag);
 
 # Represents a DICOM data element value.
-public type DataElementValue string|int|float|SequenceValue|byte[]|Tag?;
+public type DataElementValue string|int|float|table<record { readonly Tag tag; }> key(tag)|byte[]|Tag?;
 
 # Represents a DICOM data element.
 #
