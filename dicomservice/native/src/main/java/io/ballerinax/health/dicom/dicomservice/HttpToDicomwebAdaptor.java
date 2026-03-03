@@ -19,13 +19,9 @@
 package io.ballerinax.health.dicom.dicomservice;
 
 import io.ballerina.runtime.api.Environment;
-import io.ballerina.runtime.api.Future;
-import io.ballerina.runtime.api.PredefinedTypes;
-import io.ballerina.runtime.api.async.StrandMetadata;
-import io.ballerina.runtime.api.creators.TypeCreator;
+import io.ballerina.runtime.api.concurrent.StrandMetadata;
 import io.ballerina.runtime.api.types.ResourceMethodType;
 import io.ballerina.runtime.api.types.ServiceType;
-import io.ballerina.runtime.api.types.Type;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BString;
@@ -38,36 +34,6 @@ import static io.ballerinax.health.dicom.dicomservice.ModuleUtils.getModule;
 public class HttpToDicomwebAdaptor {
 
     /**
-     * Strand metadata for the method "executeWithNoPathParams".
-     */
-    public static final StrandMetadata EXECUTE_WITH_NO_PATH_PARAMS = new StrandMetadata(
-            getModule().getOrg(),
-            getModule().getName(),
-            getModule().getMajorVersion(),
-            "executeWithNoPathParams"
-    );
-
-    /**
-     * Strand metadata for the method "executeWithStudy".
-     */
-    public static final StrandMetadata EXECUTE_WITH_STUDY = new StrandMetadata(
-            getModule().getOrg(),
-            getModule().getName(),
-            getModule().getMajorVersion(),
-            "executeWithStudy"
-    );
-
-    /**
-     * Strand metadata for the method "executeWithStudyAndSeries".
-     */
-    public static final StrandMetadata EXECUTE_WITH_STUDY_AND_SERIES = new StrandMetadata(
-            getModule().getOrg(),
-            getModule().getName(),
-            getModule().getMajorVersion(),
-            "executeWithStudyAndSeries"
-    );
-
-    /**
      * Executes the given DICOM service method with no path parameters.
      *
      * @param environment    The Ballerina environment.
@@ -75,27 +41,21 @@ public class HttpToDicomwebAdaptor {
      * @param queryParams    The query parameters.
      * @param service        The DICOM service object.
      * @param resourceMethod The resource method to be executed.
-     * @return Null value.
+     * @return Execution response payload object
      */
     public static Object executeWithNoPathParams(
             Environment environment, BObject dicomContext,
             BMap<Object, Object> queryParams, BObject service,
             ResourceMethodType resourceMethod
     ) {
-        Future future = environment.markAsync();
-        ExecutionCallback executionCallback = new ExecutionCallback(future);
-        ServiceType serviceType = (ServiceType) service.getType();
-        Type returnType = TypeCreator.createUnionType(PredefinedTypes.TYPE_ANY, PredefinedTypes.TYPE_ERROR);
         if (resourceMethod != null) {
-            if (serviceType.isIsolated() && serviceType.isIsolated(resourceMethod.getName())) {
-                environment.getRuntime().invokeMethodAsyncConcurrently(service, resourceMethod.getName(), null,
-                        EXECUTE_WITH_NO_PATH_PARAMS, executionCallback,
-                        null, returnType, dicomContext, true, queryParams, true);
-            } else {
-                environment.getRuntime().invokeMethodAsyncSequentially(service, resourceMethod.getName(), null,
-                        EXECUTE_WITH_NO_PATH_PARAMS, executionCallback,
-                        null, returnType, dicomContext, true, queryParams, true);
-            }
+            return environment.yieldAndRun(() -> {
+                ServiceType serviceType = (ServiceType) service.getType();
+                boolean isConcurrentSafe = serviceType.isIsolated() && serviceType.isIsolated(resourceMethod.getName());
+                StrandMetadata metadata = new StrandMetadata(isConcurrentSafe, null);
+                // Call method directly via yield context
+                return environment.getRuntime().callMethod(service, resourceMethod.getName(), metadata, dicomContext, queryParams);
+            });
         }
         return null;
     }
@@ -109,7 +69,7 @@ public class HttpToDicomwebAdaptor {
      * @param queryParams    The query parameters.
      * @param service        The DICOM service object.
      * @param resourceMethod The resource method to be executed.
-     * @return Null value.
+     * @return Execution response payload object
      */
     public static Object executeWithStudy(
             Environment environment,
@@ -119,20 +79,13 @@ public class HttpToDicomwebAdaptor {
             BObject service,
             ResourceMethodType resourceMethod
     ) {
-        Future future = environment.markAsync();
-        ExecutionCallback executionCallback = new ExecutionCallback(future);
-        ServiceType serviceType = (ServiceType) service.getType();
-        Type returnType = TypeCreator.createUnionType(PredefinedTypes.TYPE_ANY, PredefinedTypes.TYPE_ERROR);
         if (resourceMethod != null) {
-            if (serviceType.isIsolated() && serviceType.isIsolated(resourceMethod.getName())) {
-                environment.getRuntime().invokeMethodAsyncConcurrently(service, resourceMethod.getName(), null,
-                        EXECUTE_WITH_STUDY, executionCallback,
-                        null, returnType, study, true, dicomContext, true, queryParams, true);
-            } else {
-                environment.getRuntime().invokeMethodAsyncSequentially(service, resourceMethod.getName(), null,
-                        EXECUTE_WITH_STUDY, executionCallback,
-                        null, returnType, study, true, dicomContext, true, queryParams, true);
-            }
+            return environment.yieldAndRun(() -> {
+                ServiceType serviceType = (ServiceType) service.getType();
+                boolean isConcurrentSafe = serviceType.isIsolated() && serviceType.isIsolated(resourceMethod.getName());
+                StrandMetadata metadata = new StrandMetadata(isConcurrentSafe, null);
+                return environment.getRuntime().callMethod(service, resourceMethod.getName(), metadata, study, dicomContext, queryParams);
+            });
         }
         return null;
     }
@@ -147,7 +100,7 @@ public class HttpToDicomwebAdaptor {
      * @param queryParams    The query parameters.
      * @param service        The DICOM service object.
      * @param resourceMethod The resource method to be executed.
-     * @return Null value.
+     * @return Execution response payload object
      */
     public static Object executeWithStudyAndSeries(
             Environment environment, BString study, BString series,
@@ -155,20 +108,13 @@ public class HttpToDicomwebAdaptor {
             BObject service,
             ResourceMethodType resourceMethod
     ) {
-        Future future = environment.markAsync();
-        ExecutionCallback executionCallback = new ExecutionCallback(future);
-        ServiceType serviceType = (ServiceType) service.getType();
-        Type returnType = TypeCreator.createUnionType(PredefinedTypes.TYPE_ANY, PredefinedTypes.TYPE_ERROR);
         if (resourceMethod != null) {
-            if (serviceType.isIsolated() && serviceType.isIsolated(resourceMethod.getName())) {
-                environment.getRuntime().invokeMethodAsyncConcurrently(service, resourceMethod.getName(), null,
-                        EXECUTE_WITH_STUDY_AND_SERIES, executionCallback,
-                        null, returnType, study, true, series, true, dicomContext, true, queryParams, true);
-            } else {
-                environment.getRuntime().invokeMethodAsyncSequentially(service, resourceMethod.getName(), null,
-                        EXECUTE_WITH_STUDY_AND_SERIES, executionCallback,
-                        null, returnType, study, true, series, true, dicomContext, true, queryParams, true);
-            }
+            return environment.yieldAndRun(() -> {
+                ServiceType serviceType = (ServiceType) service.getType();
+                boolean isConcurrentSafe = serviceType.isIsolated() && serviceType.isIsolated(resourceMethod.getName());
+                StrandMetadata metadata = new StrandMetadata(isConcurrentSafe, null);
+                return environment.getRuntime().callMethod(service, resourceMethod.getName(), metadata, study, series, dicomContext, queryParams);
+            });
         }
         return null;
     }

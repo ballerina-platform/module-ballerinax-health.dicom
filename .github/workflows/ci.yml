@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+env:
+  BALLERINA_VERSION: 2201.12.10
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      project-matrix: ${{ steps.unique-project-paths.outputs.BALLERINA_PROJECT_PATHS }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Extract Unique Project Paths from Changed Files
+        id: unique-project-paths
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get changed files of PR from github API
+          CHANGED_FILES=$(gh api graphql -f query='
+            query($owner: String!, $repo: String!, $pr: Int!, $endCursor: String) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $pr) {
+                  files(first: 100, after: $endCursor) {
+                    pageInfo{ hasNextPage, endCursor }
+                    nodes {
+                      path
+                    }
+                  }
+                }
+              }
+            }' -F owner='ballerina-platform' -F repo='module-ballerinax-health.dicom' -F pr=${{ github.event.pull_request.number }} --paginate --jq '.data.repository.pullRequest.files.nodes.[].path')
+          echo "Changed Files: "
+          echo "${CHANGED_FILES}"
+
+          # Convert CHANGED_FILES to an array
+          readarray -t CHANGED_FILES_ARRAY <<<"${CHANGED_FILES}"
+
+          # Remove duplicates from the CHANGED_FILES_ARRAY
+          declare -A UNIQUE_PATHS_MAP
+          for file in "${CHANGED_FILES_ARRAY[@]}"; do
+            EXTRACTED_PATH=$(echo "$file" | cut -d '/' -f 1)
+
+            if [[ $EXTRACTED_PATH == "core" || $EXTRACTED_PATH == "dicomparser" || $EXTRACTED_PATH == "dicomservice" || $EXTRACTED_PATH == "dicomweb" ]]; then
+              UNIQUE_PATHS_MAP[$EXTRACTED_PATH]=1
+            fi
+          done
+
+          # Print the unique project paths
+          echo "Extracted Unique Project Paths: "
+          for EXTRACTED_PATH in "${!UNIQUE_PATHS_MAP[@]}"; do
+            echo "$EXTRACTED_PATH"
+          done
+
+          # Create the JSON array with elements enclosed in double quotes
+          UNIQUE_PATHS_JSON=$(for key in "${!UNIQUE_PATHS_MAP[@]}"; do echo "\"$key\""; done | jq -s -c .)
+          echo "UNIQUE_PATHS_JSON: "
+          echo "${UNIQUE_PATHS_JSON}"
+          echo "BALLERINA_PROJECT_PATHS=${UNIQUE_PATHS_JSON}" >> $GITHUB_OUTPUT
+
+  build:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    env:
+      JAVA_OPTS: -Xmx4G
+    if: ${{ needs.setup.outputs.project-matrix != '[]' }}
+    strategy:
+      matrix:
+        path: ${{ fromJson(needs.setup.outputs.project-matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Up Ballerina
+        uses: ballerina-platform/setup-ballerina@v1.1.0
+        with:
+          version: $BALLERINA_VERSION
+
+      - name: Setup Java
+        if: ${{ matrix.path == 'core' || matrix.path == 'dicomservice' }}
+        uses: actions/setup-java@v2
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Setup Gradle
+        if: ${{ matrix.path == 'core' || matrix.path == 'dicomservice' }}
+        uses: gradle/gradle-build-action@v2
+
+      - name: Ballerina Build
+        if: ${{ matrix.path == 'dicomparser' || matrix.path == 'dicomweb' }}
+        run: |
+          pushd "${{ matrix.path }}"
+          bal pack
+          popd
+
+      - name: Gradle Build
+        if: ${{ matrix.path == 'core' || matrix.path == 'dicomservice' }}
+        env:
+          GITHUB_USERNAME: ${{ github.actor }}
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pushd "${{ matrix.path }}"
+          ./gradlew build -x test
+          popd
+
+  test:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    env:
+      JAVA_OPTS: -Xmx4G
+    if: ${{ needs.setup.outputs.project-matrix != '[]' }}
+    strategy:
+      matrix:
+        path: ${{ fromJson(needs.setup.outputs.project-matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Up Ballerina
+        uses: ballerina-platform/setup-ballerina@v1.1.0
+        with:
+          version: $BALLERINA_VERSION
+
+      - name: Setup Java
+        if: ${{ matrix.path == 'core' || matrix.path == 'dicomservice' }}
+        uses: actions/setup-java@v2
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Setup Gradle
+        if: ${{ matrix.path == 'core' || matrix.path == 'dicomservice' }}
+        uses: gradle/gradle-build-action@v2
+
+      - name: Ballerina Test
+        if: ${{ matrix.path == 'dicomparser' || matrix.path == 'dicomweb' }}
+        run: |
+          pushd "${{ matrix.path }}"
+          bal test --code-coverage
+          popd
+
+      - name: Gradle Test
+        if: ${{ matrix.path == 'core' || matrix.path == 'dicomservice' }}
+        env:
+          GITHUB_USERNAME: ${{ github.actor }}
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pushd "${{ matrix.path }}"
+          ./gradlew test
+          popd
+
+      - name: Read Ballerina Test Results
+        if: ${{ matrix.path == 'dicomparser' || matrix.path == 'dicomweb' }}
+        id: test_results
+        run: |
+          if [ -f "./${{ matrix.path }}/target/report/test_results.json" ]; then
+            content=`cat ./${{ matrix.path }}/target/report/test_results.json`                
+            content="${content//'%'/'%25'}"
+            content="${content//$'\n'/'%0A'}"
+            content="${content//$'\r'/'%0D'}"
+
+            echo "Covered Code Lines : $(echo "$content" | jq -r '.coveredLines')"
+            echo "Total Code Lines : $(echo "$content" | jq -r '.missedLines') + $(echo "$content" | jq -r '.coveredLines')"
+            echo "Code Coverage Percentage : $(echo "$content" | jq -r '.coveragePercentage')"
+          else
+            echo "No test results file found for ${{ matrix.path }}."
+          fi
