@@ -24,11 +24,11 @@ function createSequenceValueValidDataset() {
         tag: {group: 0x0008, element: 0x1140},
         vr: dicom:SQ,
         vl: -1,
-        value: table [ // Sequence value
+        value: <dicom:SequenceValue> table key(tag) [ // Sequence value
             {
                 tag: {group: 0xFFFE, element: 0xE000},
                 length: -1,
-                valueDataset: table [
+                valueDataset: table key(tag) [
                     {
                         tag: {group: 0x0008, element: 0x1150},
                         vr: dicom:UI,

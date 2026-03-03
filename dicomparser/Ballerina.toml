@@ -10,9 +10,3 @@ export = ["health.dicom.dicomparser"]
 
 [build-options]
 observabilityIncluded = true
-
-[[dependency]]
-org = "ballerinax"
-name = "health.dicom"
-version = "0.1.0"
-repository = "local"

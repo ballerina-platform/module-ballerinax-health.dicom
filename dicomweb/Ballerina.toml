@@ -11,7 +11,3 @@ export = ["health.dicom.dicomweb"]
 [build-options]
 observabilityIncluded = true
 
-[[dependency]]
-org = "ballerinax"
-name = "health.dicom"
-version = "0.1.0"
