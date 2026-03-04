@@ -46,7 +46,7 @@ jobs:
           BALLERINA_CENTRAL_ACCESS_TOKEN: ${{ secrets.BALLERINA_CENTRAL_STAGE_ACCESS_TOKEN }}
         run: |
           pushd dicomservice
-          ./gradlew build -x test
+          ./gradlew build balPack -x test
           popd
 
       - name: Run gradle build for dev
@@ -58,7 +58,7 @@ jobs:
           BALLERINA_CENTRAL_ACCESS_TOKEN: ${{ secrets.BALLERINA_CENTRAL_DEV_ACCESS_TOKEN }}
         run: |
           pushd dicomservice
-          ./gradlew build -x test
+          ./gradlew build balPack -x test
           popd
 
       - name: Run gradle build for prod
@@ -68,7 +68,7 @@ jobs:
           GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pushd dicomservice
-          ./gradlew build -x test
+          ./gradlew build balPack -x test
           popd
 
       - name: Push to Staging
