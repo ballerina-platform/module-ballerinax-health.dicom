@@ -16,7 +16,7 @@
 
 import ballerina/io;
 import ballerina/log;
-import ballerinax/health.dicom;
+import ballerinax/health.dicom as dicom;
 
 # Parses a DICOM source.
 #

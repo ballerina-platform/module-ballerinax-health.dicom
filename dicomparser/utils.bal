@@ -15,7 +15,7 @@
 // under the License.
 
 import ballerina/io;
-import ballerinax/health.dicom;
+import ballerinax/health.dicom as dicom;
 
 # Reads the preamble from a DICOM file.
 #

@@ -1,91 +1,115 @@
 # Ballerina DICOM Packages
 
-The Ballerina DICOM packages provide functionalities to work with Digital Imaging and Communications in Medicine (DICOM) standard in Ballerina programs.
+The Ballerina DICOM packages provide a suite of modules for working with the [Digital Imaging and Communications in Medicine (DICOM)](https://www.dicomstandard.org/) standard in Ballerina programs. These packages enable developers to parse DICOM files, work with DICOM data elements, build DICOMweb APIs, and implement standards-compliant DICOM services.
 
-These packages include DICOM structures and data types, encoders, validators, parsers, DICOMweb related utils and a DICOM service type for creating DICOMweb APIs, as well as other miscellaneous utilities for working with the DICOM standard.
+> **Note:** These packages are currently in a work-in-progress state and are undergoing rapid changes to ensure their functionality and reliability.
 
-| Package | Description |
-| --- | --- |
-| [health.dicom](core/ballerina/Module.md) | Provides DICOM data types, error types, data element dictionaries, encoders, validators, and utility functions. |
-| [health.dicom.dicomparser](dicomparser/Module.md) | Provides DICOM file, dataset, and data element parsers. |
-| [health.dicom.dicomweb](dicomweb/Module.md) | Provides DICOMweb  data types, error types, a response builder, and utility functions.  |
-| [heath.dicom.dicomservice](dicomservice/ballerina/Package.md) | Provides a custom DICOM service type to easily implement DICOMweb APIs.  |
+---
 
-**Note: These packages are currently in a work-in-progress state and are undergoing rapid changes to ensure their functionality and reliability.**
+## Packages
 
-## Build from the source
+| Package | Description | README |
+| --- | --- | --- |
+| `ballerinax/health.dicom` | Core package — DICOM data types, error types, data element dictionaries, VR encoders/validators, tag constants, and utility functions. | [README](core/ballerina/README.md) |
+| `ballerinax/health.dicom.dicomparser` | DICOM file, dataset, and data element parsers. Supports structured type parsing for PN, DA, and TM VRs. | [README](dicomparser/README.md) |
+| `ballerinax/health.dicom.dicomweb` | DICOMweb data types, error types, a JSON response builder (`generateResponse`), and query parameter utilities. | [README](dicomweb/README.md) |
+| `ballerinax/health.dicom.dicomservice` | Custom Ballerina service type (`Listener`, `DicomContext`, `ApiConfig`) for building DICOMweb APIs with built-in request/query parameter processing. | [README](dicomservice/ballerina/README.md) |
 
-### Set Up the prerequisites
+---
+
+## Architecture Overview
+
+The packages are designed as layered modules that build on each other:
+
+```
+┌─────────────────────────────────────────────────┐
+│          health.dicom.dicomservice              │  ← DICOMweb API service type
+└───────────────────────┬─────────────────────────┘
+                        │ depends on
+┌───────────────────────▼─────────────────────────┐
+│          health.dicom.dicomweb                  │  ← DICOMweb response builder
+└───────────────────────┬─────────────────────────┘
+                        │ depends on
+┌───────────────────────▼─────────────────────────┐
+│          health.dicom.dicomparser               │  ← DICOM file/dataset parsing
+└───────────────────────┬─────────────────────────┘
+                        │ depends on
+┌───────────────────────▼─────────────────────────┐
+│          health.dicom  (core)                   │  ← DICOM types, dictionary, utils
+└─────────────────────────────────────────────────┘
+```
+
+### Package Responsibilities
+
+- **`health.dicom`** — The foundation layer. Contains all DICOM primitive types (`Dataset`, `Tag`, `Vr`, `DataElement`), the data element dictionary, transfer syntax constants, VR encoders/validators, named tag constants (e.g., `TAG_PATIENT_NAME`), and core utility functions (`getString`, `getInt`, `parseDate`, `parseTime`, `parsePersonName`, etc.).
+
+- **`health.dicom.dicomparser`** — Builds on the core to parse raw DICOM binary files and byte streams into structured `Dataset` objects. Supports Little Endian and Big Endian transfer syntaxes, implicit/explicit VR, and pixel data skipping for performance.
+
+- **`health.dicom.dicomweb`** — Transforms parsed DICOM `Dataset` arrays into DICOMweb JSON Model Objects (`application/dicom+json`) following the QIDO-RS, WADO-RS, and STOW-RS specifications. Provides structured error types (`ProcessingError`, `ValidationError`) and `StatusReport` responses.
+
+- **`health.dicom.dicomservice`** — A custom Ballerina service type that wraps an HTTP listener with DICOMweb-specific processing: header validation, query parameter pre/post processing, and a `DicomContext` object injected into every resource function.
+
+---
+
+## Build from the Source
+
+### Prerequisites
 
 1. **Install Ballerina:**
 
-    - Download and install [Ballerina Swan Lake](https://ballerina.io/).
+    Download and install [Ballerina Swan Lake](https://ballerina.io/) (2201.12.x or later).
 
-2. **(Optional) Install Java SE Development Kit (JDK) version 17:**
+2. **(Optional) Install JDK 21:**
 
-    > **Note:** Only necessary if you want to build the `core` or the `dicomservice` package.
+    > **Note:** Only required to build the `core` or `dicomservice` packages (Java native components).
 
-    - Choose one of the following JDK distributions:
+    - [Oracle JDK](https://www.oracle.com/java/technologies/downloads/)
+    - [OpenJDK / Eclipse Temurin](https://adoptium.net/)
 
-        - [Oracle](https://www.oracle.com/java/technologies/downloads/)
-
-        - [OpenJDK](https://adoptium.net/)
-
-    > **Note:** Set the **JAVA_HOME** to the path where you installed the JDK.
+    > Set the `JAVA_HOME` environment variable to the JDK installation path.
 
 3. **(Optional) Configure GitHub Credentials:**
 
-    > **Note:** Only necessary if you want to build the `core` or the `dicomservice` package.
+    > **Note:** Only required to build the `core` or `dicomservice` packages.
 
-    The `core` and the `dicomservice` packages use Java dependencies, which use Ballerina packages hosted on Github. To install them during the Gradle build, [a GitHub personal access token (PAT) with the `read:packages` scope is required](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#authenticating-to-github-packages).
-
-    Export your GitHub username and a personal access token,
+    The native Java dependencies are hosted on GitHub Packages. Export your credentials:
 
     ```shell
-    export GITHUB_USERNAME=<Username>
-    export GITHUB_PAT=<PAT>
+    export GITHUB_USERNAME=<your-github-username>
+    export GITHUB_PAT=<personal-access-token-with-read:packages-scope>
     ```
 
-### Build the source
+### Build
 
-Execute the commands below to build from source.
-
-- **To build the `core` or the `dicomservice` package:**
-
-  Navigate to the respective package directory and execute,
+- **`core` or `dicomservice`** (Gradle build — includes native Java compilation):
 
   ```shell
+  cd core   # or: cd dicomservice
   ./gradlew clean build
   ```
 
-- **To build any other package (e.g., `dicomparser`):**
-
-  Navigate to the respective package directory and execute,
+- **`dicomparser` or `dicomweb`** (pure Ballerina):
 
   ```shell
+  cd dicomparser   # or: cd dicomweb
   bal build
   ```
 
-### Publish packages
-> **Note:** If you want to publish the `core` or the `dicomservice` package, please make sure to build the package first.
+### Publish
 
-Navigate to the package directory (inside `ballerina` directory for the `core` or the `dicomservice` package) and follow the following instructions,
+> **Note:** Build the `core` or `dicomservice` packages with Gradle before publishing.
+
+Navigate to the package directory (`ballerina/` subdirectory for `core` and `dicomservice`) and follow the instructions for:
 
 - [Publish to Ballerina Central](https://ballerina.io/learn/publish-packages-to-ballerina-central/#publish-a-package-to-ballerina-central)
-
 - [Publish to local repository](https://ballerina.io/learn/manage-dependencies/#use-dependencies-from-the-local-repository)
 
-## Contribute to Ballerina
+---
 
-As an open source project, Ballerina welcomes contributions from the community.
+## Contributing
 
-For more information, go to the [contribution guidelines](https://github.com/ballerina-platform/ballerina-lang/blob/master/CONTRIBUTING.md).
+As an open source project, Ballerina welcomes contributions from the community. For more information, see the [contribution guidelines](https://github.com/ballerina-platform/ballerina-lang/blob/master/CONTRIBUTING.md).
 
-## Code of conduct
+## Code of Conduct
 
 All contributors are encouraged to read the [Ballerina Code of Conduct](https://ballerina.io/code-of-conduct).
-
-## Useful links
-- Discuss code changes of the Ballerina project in [ballerina-dev@googlegroups.com](mailto:ballerina-dev@googlegroups.com).
-- Chat live with us via our [Discord server](https://discord.gg/ballerinalang).
-- Post all technical questions on Stack Overflow with the [#ballerina](https://stackoverflow.com/questions/tagged/ballerina) tag.
