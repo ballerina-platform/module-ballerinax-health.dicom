@@ -1,7 +1,7 @@
 [package]
 org = "ballerinax"
 name = "health.dicom.dicomweb"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Ballerina"]
 keywords = ["Healthcare", "DICOM", "PACS", "DICOMweb", "Web"]
 repository = "https://github.com/ballerina-platform/module-ballerinax-health.dicom"
