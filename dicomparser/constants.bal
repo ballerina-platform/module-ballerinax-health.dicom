@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/health.dicom;
+import ballerinax/health.dicom as dicom;
 
 # DICOM prefix bytes
 final byte[] & readonly DICOM_PREFIX = "DICM".toBytes().cloneReadOnly();

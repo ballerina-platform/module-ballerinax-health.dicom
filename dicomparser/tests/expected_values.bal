@@ -14,7 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import ballerinax/health.dicom;
+import ballerinax/health.dicom as dicom;
 
 final dicom:Dataset EXPECTED_PARSED_DATASET = table [
     {"tag": {"group": 16, "element": 4112}, "vr": "AS", "vl": 4, "value": "020Y"},

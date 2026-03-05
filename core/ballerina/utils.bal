@@ -601,3 +601,267 @@ isolated function constructSpaceBytes(int length) returns byte[] {
     }
     return spaceBytes;
 }
+
+# Retrieves a string value from the dataset for a given tag.
+#
+# + dataset - The given DICOM dataset
+# + tagInt - The tag as an integer (e.g., dicom:TAG_PATIENT_NAME)
+# + return - The string value of the tag, or an `Error` if not found or cannot be converted to string
+public isolated function getString(Dataset dataset, int tagInt) returns string|Error {
+    int group = (tagInt >> 16) & 0xFFFF;
+    int element = tagInt & 0xFFFF;
+    Tag tagRec = {group: <int:Unsigned16>group, element: <int:Unsigned16>element};
+
+    DataElement? dataElement = dataset[tagRec];
+    if dataElement is () {
+        return error Error(string `Tag not found in dataset: ${tagInt.toHexString()}`);
+    }
+
+    DataElementValue value = dataElement.value;
+    if value is string {
+        return value;
+    } else if value is int|float {
+        return value.toString();
+    } else if value is byte[] {
+        string|error strVal = string:fromBytes(value);
+        if strVal is error {
+            return error Error("Failed to convert byte[] to string");
+        }
+        return strVal;
+    }
+    return error Error("Data element value is not a string type");
+}
+
+# Retrieves a data element from the dataset for a given tag integer.
+#
+# + dataset - The DICOM dataset
+# + tagInt - The tag as an integer
+# + return - The data element if found, or `()`
+public isolated function getDataElement(Dataset dataset, int tagInt) returns DataElement? {
+    int group = (tagInt >> 16) & 0xFFFF;
+    int element = tagInt & 0xFFFF;
+    Tag tagRec = {group: <int:Unsigned16>group, element: <int:Unsigned16>element};
+    return dataset[tagRec];
+}
+
+# Parses a DICOM Person Name (PN VR) string into a structured `PersonName` record.
+#
+# + pnString - The DICOM Person Name string
+# + return - The parsed `PersonName` record
+public isolated function parsePersonName(string pnString) returns PersonName {
+    // PN can have multiple component groups separated by '='. We usually care about the first one (alphabetic).
+    string[] groups = re `=`.split(pnString);
+    string alphabeticGroup = groups.length() > 0 ? groups[0] : "";
+
+    // The group is delimited by '^' into 5 components
+    string[] components = re `\^`.split(alphabeticGroup);
+
+    PersonName personName = {};
+    if components.length() > 0 && components[0] != "" {
+        personName.familyName = components[0];
+    }
+    if components.length() > 1 && components[1] != "" {
+        personName.givenName = components[1];
+    }
+    if components.length() > 2 && components[2] != "" {
+        personName.middleName = components[2];
+    }
+    if components.length() > 3 && components[3] != "" {
+        personName.prefix = components[3];
+    }
+    if components.length() > 4 && components[4] != "" {
+        personName.suffix = components[4];
+    }
+
+    return personName;
+}
+
+# Extracts an integer value from the dataset for a given tag integer.
+#
+# + dataset - The DICOM dataset
+# + tagInt - The tag as an integer
+# + return - The integer value if found and valid, or `Error`
+public isolated function getInt(Dataset dataset, int tagInt) returns int|Error {
+    DataElement? dataElement = getDataElement(dataset, tagInt);
+    if dataElement is () {
+        return error Error(string `Data element not found for tag: ${tagInt}`);
+    }
+
+    DataElementValue value = dataElement.value;
+    if value is int {
+        return value;
+    } else if value is string {
+        int|error parsedInt = int:fromString(value.trim());
+        if parsedInt is int {
+            return parsedInt;
+        }
+    }
+    return error Error("Data element value cannot be converted to int");
+}
+
+# Extracts a float value from the dataset for a given tag integer.
+#
+# + dataset - The DICOM dataset
+# + tagInt - The tag as an integer
+# + return - The float value if found and valid, or `Error`
+public isolated function getFloat(Dataset dataset, int tagInt) returns float|Error {
+    DataElement? dataElement = getDataElement(dataset, tagInt);
+    if dataElement is () {
+        return error Error(string `Data element not found for tag: ${tagInt}`);
+    }
+
+    DataElementValue value = dataElement.value;
+    if value is float {
+        return value;
+    } else if value is string {
+        float|error parsedFloat = float:fromString(value.trim());
+        if parsedFloat is float {
+            return parsedFloat;
+        }
+    } else if value is int {
+        return <float>value;
+    }
+    return error Error("Data element value cannot be converted to float");
+}
+
+# Extracts an array of strings from a multi-valued dataset element (separated by '\').
+#
+# + dataset - The DICOM dataset
+# + tagInt - The tag as an integer
+# + return - The array of strings if found and valid, or `Error`
+public isolated function getStringArray(Dataset dataset, int tagInt) returns string[]|Error {
+    string|Error val = getString(dataset, tagInt);
+    if val is string {
+        return re `\\`.split(val);
+    }
+    return val;
+}
+
+# Extracts an array of integers from a multi-valued dataset element (separated by '\').
+#
+# + dataset - The DICOM dataset
+# + tagInt - The tag as an integer
+# + return - The array of integers if found and valid, or `Error`
+public isolated function getIntArray(Dataset dataset, int tagInt) returns int[]|Error {
+    string[]|Error strArr = getStringArray(dataset, tagInt);
+    if strArr is string[] {
+        int[] intArr = [];
+        foreach string s in strArr {
+            string trimmed = s.trim();
+            if trimmed != "" {
+                int|error parsed = int:fromString(trimmed);
+                if parsed is int {
+                    intArr.push(parsed);
+                } else {
+                    return error Error(string `Failed to parse '${trimmed}' to int`);
+                }
+            }
+        }
+        return intArr;
+    }
+    return strArr;
+}
+
+# Extracts an array of floats from a multi-valued dataset element (separated by '\').
+#
+# + dataset - The DICOM dataset
+# + tagInt - The tag as an integer
+# + return - The array of floats if found and valid, or `Error`
+public isolated function getFloatArray(Dataset dataset, int tagInt) returns float[]|Error {
+    string[]|Error strArr = getStringArray(dataset, tagInt);
+    if strArr is string[] {
+        float[] floatArr = [];
+        foreach string s in strArr {
+            string trimmed = s.trim();
+            if trimmed != "" {
+                float|error parsed = float:fromString(trimmed);
+                if parsed is float {
+                    floatArr.push(parsed);
+                } else {
+                    return error Error(string `Failed to parse '${trimmed}' to float`);
+                }
+            }
+        }
+        return floatArr;
+    }
+    return strArr;
+}
+
+# Extracts a SequenceValue (SQ) from the dataset.
+#
+# + dataset - The DICOM dataset
+# + tagInt - The tag as an integer
+# + return - The `SequenceValue` if found, or `Error` if missing or invalid type
+public isolated function getSequence(Dataset dataset, int tagInt) returns SequenceValue|Error {
+    DataElement? dataElement = getDataElement(dataset, tagInt);
+    if dataElement is () {
+        return error Error(string `Data element not found for tag: ${tagInt}`);
+    }
+
+    DataElementValue val = dataElement.value;
+    if val is SequenceValue {
+        return val;
+    }
+    return error Error("Data element value is not a Sequence VR");
+}
+
+# Parses a DICOM Date string (DA VR) into a structured `DicomDate` record.
+# The DA VR format is `YYYYMMDD`.
+#
+# + daString - The DICOM Date string (format: YYYYMMDD)
+# + return - The parsed `DicomDate` record, or an `Error` if the string is invalid
+public isolated function parseDate(string daString) returns DicomDate|Error {
+    string trimmed = daString.trim();
+    if trimmed.length() != 8 {
+        return error Error(string `Invalid DA VR format: '${trimmed}'. Expected YYYYMMDD (8 digits).`);
+    }
+    int|error year = int:fromString(trimmed.substring(0, 4));
+    int|error month = int:fromString(trimmed.substring(4, 6));
+    int|error day = int:fromString(trimmed.substring(6, 8));
+    if year is error || month is error || day is error {
+        return error Error(string `Invalid DA VR value: '${trimmed}'. Must contain only digits.`);
+    }
+    return {year, month, day};
+}
+
+# Parses a DICOM Time string (TM VR) into a structured `DicomTime` record.
+# The TM VR format is `HHMMSS.FFFFFF` (only HH is required; the rest are optional).
+#
+# + tmString - The DICOM Time string (format: HH[MM[SS[.FFFFFF]]])
+# + return - The parsed `DicomTime` record, or an `Error` if the string is invalid
+public isolated function parseTime(string tmString) returns DicomTime|Error {
+    string trimmed = tmString.trim();
+    if trimmed.length() < 2 {
+        return error Error(string `Invalid TM VR format: '${trimmed}'. Expected at least HH.`);
+    }
+
+    int|error hours = int:fromString(trimmed.substring(0, 2));
+    if hours is error {
+        return error Error(string `Invalid TM VR value: could not parse hours from '${trimmed}'.`);
+    }
+    DicomTime result = {hours};
+
+    if trimmed.length() >= 4 {
+        int|error minutes = int:fromString(trimmed.substring(2, 4));
+        if minutes is int {
+            result.minutes = minutes;
+        }
+    }
+    if trimmed.length() >= 6 {
+        // Handle fractional seconds separated by '.'
+        int dotIndex = trimmed.indexOf(".") ?: -1;
+        string secStr = dotIndex != -1 ? trimmed.substring(4, dotIndex) : trimmed.substring(4, 6);
+        int|error seconds = int:fromString(secStr);
+        if seconds is int {
+            result.seconds = seconds;
+        }
+        if dotIndex != -1 && trimmed.length() > dotIndex + 1 {
+            string fracStr = trimmed.substring(dotIndex + 1);
+            int|error fractional = int:fromString(fracStr);
+            if fractional is int {
+                result.fractional = fractional;
+            }
+        }
+    }
+    return result;
+}

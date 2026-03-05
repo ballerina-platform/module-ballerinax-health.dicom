@@ -23,6 +23,47 @@ public type Tag readonly & record {|
     int:Unsigned16 element;
 |};
 
+# Represents a DICOM structured Person Name (PN VR).
+#
+# + familyName - The person's family name (last name).
+# + givenName - The person's given name (first name).
+# + middleName - The Middle name.
+# + prefix - Name prefix (e.g., Mr., Dr.).
+# + suffix - Name suffix (e.g., Jr., Ph.D.).
+public type PersonName record {|
+    string familyName?;
+    string givenName?;
+    string middleName?;
+    string prefix?;
+    string suffix?;
+|};
+
+# Represents a parsed DICOM Date (DA VR).
+# The DA VR format is YYYYMMDD.
+#
+# + year - Four-digit year
+# + month - Month (1-12)
+# + day - Day (1-31)
+public type DicomDate record {|
+    int year;
+    int month;
+    int day;
+|};
+
+# Represents a parsed DICOM Time (TM VR).
+# The TM VR format is HHMMSS.FFFFFF.
+#
+# + hours - Hours (0-23)
+# + minutes - Minutes (0-59)
+# + seconds - Seconds (0-59)
+# + fractional - Fractional seconds (0-999999)
+public type DicomTime record {|
+    int hours;
+    int minutes?;
+    int seconds?;
+    int fractional?;
+|};
+
 # Holds information about a Tag.
 #
 # + vr - Value representation of the data element
@@ -54,7 +95,7 @@ public type SequenceItem record {|
 public type SequenceValue table<SequenceItem> key(tag);
 
 # Represents a DICOM data element value.
-public type DataElementValue string|int|float|table<record { readonly Tag tag; }> key(tag)|byte[]|Tag?;
+public type DataElementValue string|int|float|table<record {readonly Tag tag;}> key(tag)|byte[]|Tag?;
 
 # Represents a DICOM data element.
 #

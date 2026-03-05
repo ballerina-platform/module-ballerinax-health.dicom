@@ -7,10 +7,10 @@ keywords = ["Healthcare", "DICOM", "PACS", "Service"]
 repository = "https://github.com/ballerina-platform/module-ballerinax-health.dicom"
 distribution = "2201.12.10"
 export = ["health.dicom.dicomservice"]
+readme = "README.md"
 
 [build-options]
 observabilityIncluded = true
-
 
 [[platform.java21.dependency]]
 path = "../native/build/libs/dicomservice-native-0.1.0.jar"

@@ -15,7 +15,7 @@
 // under the License.
 
 import ballerina/test;
-import ballerinax/health.dicom;
+import ballerinax/health.dicom as dicom;
 
 @test:Config {groups: ["utils"]}
 function parseFileParseTest() {
